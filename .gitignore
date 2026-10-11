@@ -24,3 +24,6 @@ __pycache__/
 
 # Local caches
 .cache/
+# Runtime SQLite database (generated per analysis run)
+data/radar.db
+*.db
