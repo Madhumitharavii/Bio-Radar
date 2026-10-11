@@ -1,229 +1,266 @@
 # 🧭 BioR&D Radar
 
-### Biomedical R&D Intelligence & Opportunity Discovery
+### Biomedical Research Discovery & R&D Intelligence
 
-BioR&D Radar explores a biomedical research/technology area, structures the
-literature, identifies research activity and emerging themes, surfaces
-semantically connected research directions, and generates evidence-linked
-**R&D opportunity hypotheses** — all grounded in literature actually
-retrieved for the query, with sources traceable back to PMIDs.
+BioR&D Radar is a biomedical research discovery platform that helps explore scientific literature, identify research themes, examine publication activity, and discover potential directions for future investigation. It combines PubMed literature retrieval, semantic search, structured analysis, and source-linked AI assistance in one workflow.
 
 ## Why BioR&D Radar Exists
 
-Biomedical literature is large, fast-changing, and hard to turn into
-structured, trustworthy knowledge quickly. Most RAG demos stop at
-"ask a question, get an answer." BioR&D Radar demonstrates a different
-workflow — one closer to real technology-scouting / R&D-intelligence work:
+Biomedical literature is growing rapidly, making it difficult to identify emerging research directions, connect findings across studies, and recognize gaps that could motivate further investigation.
 
-```
-SEARCH → STRUCTURE → CONNECT → ANALYZE → VISUALIZE → OPPORTUNITY DISCOVERY
-```
+BioR&D Radar aims to make this process more systematic by turning retrieved literature into a structured, searchable research landscape.
+
+Its workflow follows:
+
+**SEARCH → STRUCTURE → CONNECT → ANALYZE → VISUALIZE → DISCOVER**
+
+Unlike a basic literature question-answering system, the project brings literature retrieval, publication analysis, semantic connections, and exploratory research-opportunity generation into a single workflow.
+
+## The Problem
+
+Researchers often need to review large numbers of publications before they can understand the state of a research area. Relevant findings may be distributed across different studies, while recurring limitations and possible directions for further investigation can be difficult to identify systematically.
+
+BioR&D Radar addresses this challenge by organizing retrieved biomedical literature, extracting research themes, summarizing publication activity, connecting related papers, and generating evidence-linked hypotheses for further investigation.
+
+The platform is intended to support research exploration, not replace critical reading, scientific judgment, or expert validation.
 
 ## How It Evolved From BioLit-RAG
 
-BioR&D Radar is **not a rewrite** — it's an extension of an existing,
-working RAG project, [BioLit-RAG](.), built by reusing its PubMed
-retrieval, embedding, and LLM-generation components rather than
-replacing them.
+BioR&D Radar extends the existing BioLit-RAG project rather than rebuilding it from scratch. It reuses and extends components for PubMed retrieval, embeddings, semantic search, and LLM-based answer generation.
 
-| | BioLit-RAG | BioR&D Radar |
+| Aspect | BioLit-RAG | BioR&D Radar |
 |---|---|---|
-| Input | A question | A research topic + date range |
-| Retrieval | Fixed, pre-built 1,088-paper corpus | Dynamic, live PubMed search per topic |
-| Storage | CSV only | CSV + SQLite (structured, queryable) |
-| Output | One grounded answer | Structured landscape, publication activity, semantic connections, AI analysis, and R&D opportunity hypotheses |
-| Philosophy | Chatbot over literature | R&D intelligence tool over literature |
+| Primary purpose | Biomedical literature question answering | Biomedical research discovery and R&D intelligence |
+| Input | A biomedical question | A research topic and date range |
+| Retrieval | Existing 1,088-paper corpus | Topic-specific PubMed retrieval |
+| Storage | CSV-based corpus | CSV and SQLite |
+| Analysis | Retrieval-grounded answers | Research themes, publication activity, semantic connections, and structured AI analysis |
+| Output | An answer supported by literature | A research landscape and exploratory opportunity hypotheses |
 
-Reused unchanged: `data_loader.py`'s PubMed functions, `embedder.py`'s
-embedding/FAISS functions, the anti-hallucination grounding philosophy in
-`generator.py`. Extended: a dated-query wrapper, a SQLite layer, TF-IDF-based
-structuring, a semantic-connections module, two new structured LLM prompts,
-and a 5-tab Streamlit dashboard.
-
-## The DNP / R&D Problem Being Addressed
-
-This project was built to demonstrate the workflow described in DNP's
-R&D technology-scouting role: searching and selecting information,
-checking source reliability, turning large and fast-changing information
-into **structured, searchable knowledge with clear sources and evidence**,
-connecting signals across technologies, and communicating findings clearly.
-Biomedical literature is used here as one deliberately scoped first
-vertical — the same workflow (search → structure → connect → analyze →
-opportunity discovery) generalizes to other information sources (patents,
-startups, policy) as future work.
+BioR&D Radar adds date-filtered retrieval, structured database storage, TF-IDF-based theme extraction, semantic connections between papers, structured LLM prompts, and a multi-tab Streamlit dashboard.
 
 ## Architecture
 
-```
+```text
 USER ENTERS A BIOMEDICAL TOPIC + DATE RANGE
-                 ↓
-            PUBMED API (reused from BioLit-RAG)
-                 ↓
-       RECENT LITERATURE (with abstracts)
-                 ↓
-         CLEAN + STRUCTURE → SQLITE
-                 ↓
-     SENTENCE EMBEDDINGS (reused) → FAISS (per-run)
-                 ↓
-   ┌─────────────┼─────────────┐
-   ↓             ↓             ↓
-TRENDS        THEMES       CONNECTIONS
- (SQL)        (TF-IDF)    (cosine similarity)
-   └─────────────┼─────────────┘
-                 ↓
-         RAG CONTEXT → QWEN3 8B (Ollama, reused)
-                 ↓
-   ┌─────────────┼─────────────┐
-   ↓             ↓             ↓
-LANDSCAPE    CHALLENGES    DIRECTIONS
-                 ↓
-      R&D OPPORTUNITY HYPOTHESES
-                 ↓
-           STREAMLIT UI (5 tabs)
+                    |
+                    v
+             PUBMED RETRIEVAL
+                    |
+                    v
+       RETRIEVED PAPERS AND ABSTRACTS
+                    |
+                    v
+        CLEANING AND STRUCTURING
+                    |
+                    v
+              SQLITE STORAGE
+                    |
+                    v
+       SENTENCE EMBEDDINGS + FAISS
+                    |
+          +---------+---------+
+          |         |         |
+          v         v         v
+        TRENDS     THEMES  CONNECTIONS
+        (SQL)     (TF-IDF)  (SIMILARITY)
+          |         |         |
+          +---------+---------+
+                    |
+                    v
+        RETRIEVED LITERATURE CONTEXT
+                    |
+                    v
+           QWEN3 8B VIA OLLAMA
+                    |
+                    v
+       STRUCTURED RESEARCH ANALYSIS
+                    |
+                    v
+       EXPLORATORY OPPORTUNITY
+               HYPOTHESES
+                    |
+                    v
+           STREAMLIT DASHBOARD
 ```
 
 ## Features
 
-1. **Technology/Research Explorer** — enter a topic, date range, and
-   paper count; retrieves recent PubMed literature with title, authors,
-   year, journal, abstract, PMID, and PubMed link.
-2. **Structured Research Landscape** — TF-IDF-derived keywords, phrases,
-   and emerging terms, computed fresh from whatever was retrieved (no
-   hard-coded topic logic, so it works for arbitrary biomedical areas).
-3. **Literature Activity** — publications-by-year (SQL `GROUP BY`/`COUNT`)
-   and journal frequency. Explicitly labeled "literature activity," not
-   "market growth" — publication frequency alone doesn't establish
-   commercial importance.
-4. **AI-Assisted Research Analysis** — a structured, four-section LLM
-   analysis (Research Landscape / Emerging Directions / Common Challenges
-   / Technology Connections), grounded only in retrieved papers, with
-   [Source N] citations and explicit instructions against inventing
-   papers, PMIDs, or findings.
-5. **R&D Opportunity Discovery** — a small number of opportunity
-   hypotheses, each separating observed evidence, repeated limitations,
-   the AI-generated hypothesis itself, supporting papers, and an evidence
-   level — framed throughout as "potential," never as prediction or
-   validated opportunity.
+### 1. Research Topic Explorer
+
+Enter a biomedical research topic, date range, and desired number of papers. The application retrieves matching PubMed records containing available metadata such as titles, authors, publication years, journals, abstracts, PMIDs, and PubMed links.
+
+### 2. Structured Research Landscape
+
+Extract keywords, phrases, and potentially emerging terms from the retrieved literature using TF-IDF. The analysis is based on the retrieved corpus rather than a fixed list of predefined research topics.
+
+### 3. Literature Activity Analysis
+
+Summarize publication activity by year and journal using SQL aggregations.
+
+Publication counts are presented as **literature activity**, not as a measure of market growth, commercial potential, or scientific importance.
+
+### 4. Semantic Connections
+
+Use sentence embeddings and cosine similarity to identify papers with related textual content. These connections can help researchers explore relationships between studies that may not use identical terminology.
+
+Similarity indicates textual or semantic relatedness; it does not establish scientific agreement, causation, or novelty.
+
+### 5. AI-Assisted Research Analysis
+
+Generate a structured analysis covering:
+
+- Research landscape
+- Emerging directions
+- Common challenges
+- Technology connections
+
+The LLM is instructed to use retrieved papers as evidence and provide source references. Generated statements and citations still require verification against the original records.
+
+### 6. R&D Opportunity Discovery
+
+Generate a small number of exploratory research-opportunity hypotheses. Each hypothesis is intended to distinguish between:
+
+- Observations supported by retrieved literature
+- Recurring limitations or unresolved challenges
+- The proposed research direction
+- Supporting papers and their source identifiers
+- An indicative evidence level
+
+These outputs are hypotheses for human investigation, not validated discoveries, predictions, or guaranteed research opportunities.
 
 ## Technology Stack
 
-- **PubMed / BioPython Entrez** — literature retrieval (reused from BioLit-RAG)
-- **SQLite** — structured storage for papers and analysis runs; demonstrates
-  `GROUP BY`/`COUNT`/`ORDER BY`/`WHERE` for literature-activity queries
-- **Sentence-Transformers (`all-MiniLM-L6-v2`) + FAISS** — semantic
-  embeddings and nearest-neighbor similarity (reused from BioLit-RAG)
-- **scikit-learn (TF-IDF)** — data-driven keyword/theme/phrase extraction
-- **Qwen3 8B via Ollama** — local, grounded structured analysis and
-  opportunity generation (reused from BioLit-RAG)
-- **Streamlit + Plotly** — interactive dashboard
+- **PubMed / BioPython Entrez:** Biomedical literature retrieval
+- **SQLite:** Structured storage and SQL-based literature analysis
+- **Sentence Transformers (`all-MiniLM-L6-v2`):** Text embeddings
+- **FAISS:** Vector similarity search
+- **scikit-learn (TF-IDF):** Keyword, phrase, and theme extraction
+- **Qwen3 8B via Ollama:** Local LLM-based analysis and opportunity generation
+- **Streamlit:** Interactive application interface
+- **Plotly:** Data visualization
+- **Python, NumPy and Pandas:** Data processing and analysis
 
-## Evaluation
+## Evaluation and Testing
 
-Given the project's scope, evaluation is intentionally lightweight and
-honestly split into two parts:
+The project includes automated tests in `tests/test_pipeline.py`, using the existing 1,088-paper dataset in `data/papers.csv`.
 
-**Automated** (`tests/test_pipeline.py`, run against the real 1,088-paper
-dataset already bundled in `data/papers.csv`):
-- Year parsing on messy real PubMed date strings
-- SQLite insert + de-duplication on repeated topic runs
-- SQL `GROUP BY` aggregations (publications-by-year, journal frequency)
-- Keyword extraction is topic-agnostic: correctly surfaces each subset's
-  own defining term with zero hard-coded topic logic
-- Emerging-keyword comparison runs without error
+The tests cover:
 
-**Manual, requires your machine** (PubMed network access + a running
-local Ollama server with `qwen3:8b` pulled — neither was available in the
-sandbox this was built in):
-- Did retrieval return relevant papers for a real topic?
-- Are AI analysis sections grounded in retrieved papers, with correct
-  [Source N] references?
-- Are PMIDs/source links present and correct?
-- Are opportunity hypotheses traceable to the cited supporting papers?
+- Parsing publication years from PubMed date formats
+- SQLite insertion and deduplication
+- SQL aggregations for publication years and journal frequency
+- Topic-agnostic keyword extraction
+- Emerging-keyword comparison
 
-No numerical accuracy/precision metrics are reported — this is explicitly
-a manual, qualitative evaluation given the project's scope, and that is
-stated honestly rather than fabricated.
+These tests have passed in the development environment.
+
+**Important:** Passing these tests establishes that the tested data-processing components behave as expected. It does not establish that the complete application works correctly under all conditions or that its generated research insights are scientifically accurate.
+
+### End-to-End Validation Status
+
+The updated application still requires end-to-end validation covering:
+
+- Live PubMed retrieval for different biomedical topics and date ranges
+- Relevance and date accuracy of retrieved records
+- Semantic search and similarity results
+- Successful generation through a running Ollama server with `qwen3:8b`
+- Correct source references in AI-generated analysis
+- Evidence traceability of opportunity hypotheses
+- Streamlit interface behavior, including loading states and error handling
+
+Until these checks are completed, the project should be considered a development-stage MVP rather than a fully validated research-intelligence system.
 
 ## Responsible AI
 
-BioR&D Radar is a **biomedical research intelligence and exploratory R&D
-analysis tool**. It is explicitly **not**: a medical advice system, a
-clinical decision system, a commercial prediction engine, or a market
-forecasting system. AI-generated opportunities are always labeled as
-hypotheses. The system is instructed never to fabricate papers, PMIDs,
-or results, and to separate evidence from interpretation throughout.
+BioR&D Radar is designed for biomedical literature exploration and research support. It is not a medical advice system, a clinical decision-support system, a commercial prediction engine, or a market forecasting tool.
+
+The system aims to distinguish retrieved evidence from AI-generated interpretation and to retain links to original PubMed records. Source references and generated claims must still be checked against the original publications.
+
+The platform does not independently establish the scientific validity, feasibility, novelty, or commercial value of a proposed research direction.
 
 ## Installation
 
-Clone the repository and enter the project directory:
+### Prerequisites
+
+- Python 3.10 or a compatible Python version
+- Git
+- Internet access for PubMed retrieval
+- Ollama for local LLM-based analysis
+
+Clone the repository:
 
 ```bash
-git clone <your-github-repository-url>
-cd BioR-D-Radar
+git clone https://github.com/Madhumitharavii/Bio-Radar.git
+cd Bio-Radar
 ```
 
-Create and activate a Python virtual environment:
+Create and activate a virtual environment:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-Install the dependencies:
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Install [Ollama](https://ollama.com) and pull the Qwen3 8B model:
+Install [Ollama](https://ollama.com) and download the model:
 
 ```bash
 ollama pull qwen3:8b
 ```
 
-## Running
+If PubMed retrieval requires an email address, configure it using the environment variable supported by the application. Do not commit API credentials, private configuration, or local database files to GitHub.
+
+## Running the Application
+
+Start Ollama and ensure the required model is available. Then, from the project directory with the virtual environment activated, run:
 
 ```bash
 streamlit run app.py
 ```
 
+Streamlit will display a local application URL, usually `http://localhost:8501`. Open that address in your browser.
+
+This command runs the application locally. Other users cannot automatically access it just because the repository is on GitHub; public access requires a separate deployment.
+
 ## Example Query
 
-Topic: `Raman spectroscopy for cancer diagnostics`
-Date range: `2020–2026`
-Papers: `30`
+**Topic:** `Raman spectroscopy for cancer diagnostics`
 
-Produces: recent PubMed papers on Raman-based cancer diagnostics,
-structured keywords (e.g. "surface enhanced", "machine learning",
-"spectral classification"), a publication-activity chart, semantic
-connections between related papers (e.g. SERS ↔ machine-learning
-classification papers), a grounded four-section AI analysis, and a
-small set of literature-supported R&D opportunity hypotheses.
+**Date range:** `2020–2026`
+
+**Requested papers:** `30`
+
+Depending on the records returned by PubMed, the application can present retrieved papers, extracted keywords, publication activity, semantic connections, structured AI-assisted analysis, and exploratory research-opportunity hypotheses.
+
+The example illustrates a possible use case, not a claim that the query has already passed end-to-end validation.
 
 ## Limitations
 
-- Per-run semantic connections are computed over a small set (10-50
-  papers), not the full literature — treat connections as suggestive,
-  not comprehensive.
-- TF-IDF keyword/theme extraction is a statistical, not a biological,
-  summary — the LLM analysis layer provides the interpretive reading,
-  and should be checked against the cited sources.
-- Publication counts reflect PubMed retrieval volume for the given
-  query and date range, not the full research landscape or any
-  commercial signal.
-- All AI-generated content depends on the retrieved abstract text only
-  (not full papers), and inherits whatever gaps exist in PubMed's
-  metadata (e.g. inconsistent year formatting, which is parsed
-  defensively but not perfectly for every edge case).
-- Opportunity hypotheses are exploratory starting points for human
-  researchers to evaluate further, not validated conclusions.
 
-## Future Work (Post-Submission)
+- **Retrieval:** Depends on PubMed coverage, query, and date range.
+- **Semantic analysis:** Limited to 10–50 papers per run.
+- **Theme extraction:** TF-IDF identifies terms, not biological significance.
+- **AI analysis:** Uses abstracts; claims and citations require verification.
+- **Publication trends:** Counts do not establish research or commercial value.
+- **Opportunity discovery:** Hypotheses require expert validation.
+- **Generalization:** Performance across biomedical topics remains to be evaluated.
 
-- Technology comparison across multiple topics side-by-side
-- Markdown/PDF export of a full analysis run
-- More advanced clustering of themes (beyond TF-IDF nearest-neighbor)
-- More advanced trend detection (e.g. proper time-series modeling of
-  keyword emergence, rather than a simple recent-vs-older split)
-- Additional information sources (startups, investment, policy, patents)
-  as additional "verticals" alongside the biomedical-literature one
+## Future Work
+
+- Validate retrieval relevance and source attribution using a manually reviewed benchmark
+- Evaluate generated analyses and opportunity hypotheses against expert judgments
+- Compare multiple research topics and technology areas side by side
+- Export research landscapes and analysis reports to Markdown or PDF
+- Explore more advanced theme clustering and time-series trend analysis
+- Extend the platform to additional information sources, such as patents, startups, funding activity, and policy documents
+- Improve deployment, usability, and error handling
+
+---
+
+**Project status:** Development-stage MVP. Automated tests cover selected pipeline components; complete live retrieval, generation, and interface validation remains to be demonstrated.
