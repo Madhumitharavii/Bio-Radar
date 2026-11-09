@@ -3,6 +3,13 @@ import ollama
 
 MODEL_NAME = "qwen3:8b"
 
+# Context window requested from Ollama for the Radar analysis calls.
+# Ollama's default window depends on the Ollama version and can be
+# smaller than a multi-paper evidence context, in which case longer
+# prompts are silently truncated. Setting it explicitly keeps runs
+# reproducible; qwen3:8b supports more than this. See src/evidence.py for the evidence budget.
+ANALYSIS_NUM_CTX = 16384
+
 
 def generate_answer(query, context):
     """
@@ -127,6 +134,7 @@ that explicitly instead of speculating.
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
+        options={"num_ctx": ANALYSIS_NUM_CTX},
     )
 
     return response["message"]["content"]
@@ -197,6 +205,7 @@ supportable, and say so.
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
+        options={"num_ctx": ANALYSIS_NUM_CTX},
     )
 
     return response["message"]["content"]

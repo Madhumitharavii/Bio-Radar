@@ -85,3 +85,14 @@ def most_similar_pairs(articles, embeddings, top_k_neighbors=1, max_pairs=6):
     pairs.sort(key=lambda p: p["similarity"], reverse=True)
 
     return pairs[:max_pairs]
+
+
+def topic_similarity_scores(topic, embeddings):
+    """
+    Cosine similarity between the topic text and each paper.
+
+    Used only to rank which papers go into the LLM context; the
+    embeddings are normalized, so a dot product is cosine similarity.
+    """
+    topic_embedding = create_embeddings([topic])[0]
+    return embeddings @ topic_embedding

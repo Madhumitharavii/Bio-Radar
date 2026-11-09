@@ -1,5 +1,10 @@
 
-"""Regenerate the preliminary hyperspectral Raman screening CSV."""
+"""
+Regenerate the preliminary hyperspectral Raman screening CSV.
+
+Experimental, standalone script (not part of the Radar app). See the
+"Experimental Module" section of the README.
+"""
 
 from pathlib import Path
 

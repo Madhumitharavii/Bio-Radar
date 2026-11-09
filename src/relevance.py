@@ -1,5 +1,12 @@
 
-"""Evidence-based preliminary screening for hyperspectral Raman research."""
+"""
+Evidence-based preliminary screening for hyperspectral Raman research.
+
+EXPERIMENTAL, domain-specific module: it is not used by the Streamlit
+app or radar_pipeline. It is run separately via screen_candidates.py.
+Labels are rule-based screening priorities that require full-text
+review, not verified conclusions.
+"""
 
 import re
 

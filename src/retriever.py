@@ -64,17 +64,24 @@ def search(query, df, index, model, top_k=5):
     return results
 
 
-def build_context(results):
+def build_context(results, source_numbers=None):
     """
     Convert retrieved papers into context
     that can be provided to the language model.
+
+    source_numbers optionally gives each result's SOURCE number
+    (used by BioR&D Radar so a subset of papers keeps the numbering
+    shown in the UI). By default sources are numbered 1..N.
     """
+
+    if source_numbers is None:
+        source_numbers = range(1, len(results) + 1)
 
     context_parts = []
 
-    for rank, result in enumerate(
-        results,
-        start=1
+    for rank, result in zip(
+        source_numbers,
+        results
     ):
 
         context_parts.append(

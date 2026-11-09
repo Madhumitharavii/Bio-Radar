@@ -17,6 +17,7 @@ from src.database import (
     init_db,
     insert_papers,
     log_analysis_run,
+    link_run_papers,
     papers_by_year,
     journal_frequency,
 )
@@ -24,12 +25,22 @@ from src.analysis import (
     extract_keywords_and_phrases,
     recent_vs_older_keywords,
 )
-from src.connections import build_run_embeddings, most_similar_pairs
-from src.retriever import build_context
+from src.connections import (
+    build_run_embeddings,
+    most_similar_pairs,
+    topic_similarity_scores,
+)
+from src.evidence import build_evidence_context, DEFAULT_MAX_SOURCES
 from src.generator import generate_structured_analysis, generate_opportunities
 
 
-def run_radar_analysis(topic, start_year, end_year, max_results=30):
+def run_radar_analysis(
+    topic,
+    start_year,
+    end_year,
+    max_results=30,
+    max_context_sources=DEFAULT_MAX_SOURCES,
+):
     """
     Run the full BioR&D Radar pipeline for one topic.
 
@@ -51,6 +62,9 @@ def run_radar_analysis(topic, start_year, end_year, max_results=30):
         "activity_by_year": [],
         "journal_counts": [],
         "connections": [],
+        "run_id": None,
+        "context_sources": [],
+        "context_selection": None,
         "structured_analysis": None,
         "opportunities": None,
         "warnings": warnings,
@@ -78,17 +92,27 @@ def run_radar_analysis(topic, start_year, end_year, max_results=30):
     result["num_papers"] = len(articles)
 
     # 2. STRUCTURE (store + log)
+    # Papers are deduplicated per topic across runs; run_papers links
+    # this run to exactly the papers it retrieved, so the activity and
+    # journal aggregations below reflect only the current topic/date
+    # range, not papers kept from earlier runs.
+    run_id = None
     try:
         insert_papers(articles, query_topic=topic)
-        log_analysis_run(topic, len(articles))
+        run_id = log_analysis_run(
+            topic, len(articles), start_year=start_year, end_year=end_year
+        )
+        link_run_papers(run_id, articles, query_topic=topic)
+        result["run_id"] = run_id
     except Exception as exc:
         warnings.append(f"Database storage failed: {exc}")
 
-    try:
-        result["activity_by_year"] = papers_by_year(topic)
-        result["journal_counts"] = journal_frequency(topic)
-    except Exception as exc:
-        warnings.append(f"SQL analysis queries failed: {exc}")
+    if run_id is not None:
+        try:
+            result["activity_by_year"] = papers_by_year(topic, run_id=run_id)
+            result["journal_counts"] = journal_frequency(topic, run_id=run_id)
+        except Exception as exc:
+            warnings.append(f"SQL analysis queries failed: {exc}")
 
     try:
         kw_result = extract_keywords_and_phrases(articles)
@@ -99,32 +123,43 @@ def run_radar_analysis(topic, start_year, end_year, max_results=30):
         warnings.append(f"Keyword/theme extraction failed: {exc}")
 
     # 3. CONNECT (semantic similarity on this run's papers)
+    relevance_scores = None
+    embeddings = None
     try:
         embeddings, _index = build_run_embeddings(articles)
         result["connections"] = most_similar_pairs(articles, embeddings)
     except Exception as exc:
+        embeddings = None
         warnings.append(
             f"Semantic connection analysis unavailable "
             f"(embeddings/FAISS step failed): {exc}"
         )
 
-    # 4. ANALYZE (grounded RAG context + structured LLM analysis)
-    # Build a context identical in format to BioLit-RAG's
-    # build_context, just over the full retrieved set here
-    # rather than a top-k search result.
-    pseudo_results = [
-        {
-            "title": a.get("title", ""),
-            "authors": a.get("authors", ""),
-            "journal": a.get("journal", ""),
-            "year": a.get("year", ""),
-            "pmid": a.get("pmid", ""),
-            "url": a.get("url", ""),
-            "abstract": a.get("abstract", ""),
-        }
-        for a in articles
-    ]
-    context = build_context(pseudo_results)
+    if embeddings is not None:
+        try:
+            relevance_scores = topic_similarity_scores(topic, embeddings)
+        except Exception as exc:
+            warnings.append(
+                f"Topic-similarity ranking failed; using PubMed relevance "
+                f"order to select LLM evidence: {exc}"
+            )
+
+    # 4. ANALYZE (grounded context + structured LLM analysis)
+    # Every retrieved paper stays in the result and the Papers tab.
+    # Only the LLM context is bounded: the papers most semantically
+    # similar to the topic (or PubMed's relevance order if embeddings
+    # are unavailable) are kept, with their original [Source N]
+    # numbers. See src/evidence.py.
+    context, result["context_sources"] = build_evidence_context(
+        articles,
+        scores=relevance_scores,
+        max_sources=max_context_sources,
+    )
+    result["context_selection"] = (
+        "semantic similarity to the topic"
+        if relevance_scores is not None
+        else "PubMed relevance order"
+    )
 
     try:
         result["structured_analysis"] = generate_structured_analysis(

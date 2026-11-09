@@ -181,13 +181,14 @@ def extract_keywords_and_phrases(articles, top_n=15):
     }
 
 
-def publication_activity(topic):
+def publication_activity(topic, run_id=None):
     """
     Return publication counts grouped by year for a topic.
 
-    Delegates the SQL aggregation to database.py.
+    Delegates the SQL aggregation to database.py. Pass run_id to
+    restrict counts to one analysis run's papers.
     """
-    return papers_by_year(topic)
+    return papers_by_year(topic, run_id=run_id)
 
 
 def _term_document_frequencies(texts, top_n=100):
